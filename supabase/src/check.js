@@ -142,9 +142,13 @@ if (failed.length === 0) {
   console.log('=> 전체 통과');
   console.log('');
   if (anonRowTotal === 0) {
-    console.log('참고. 지금은 데이터가 없어도 0행이 나옵니다. 브라우저에서 로그인해 할 일을');
-    console.log('      몇 개 넣은 뒤 이 검사를 다시 돌리세요. 그때도 0행이면 "데이터가 있는데도');
-    console.log('      바깥에서는 안 보인다"가 되어 RLS 가 실제로 막고 있다는 증거가 됩니다.');
+    console.log('이 검사만으로는 데이터가 있는지 없는지 알 수 없습니다. 그게 정상입니다 —');
+    console.log('바깥에서 보면 빈 프로젝트와 구별되지 않아야 RLS 가 제 일을 한 것입니다.');
+    console.log('');
+    console.log('그래서 증거는 두 화면을 나란히 놓을 때 완성됩니다.');
+    console.log('  로그인한 브라우저 화면에 할 일이 N 건 보인다');
+    console.log('  같은 순간 여기서는 0행이 나온다');
+    console.log('둘이 동시에 참이면, 막고 있는 것은 앱 코드가 아니라 RLS 다.');
   }
 } else {
   console.log(`=> 실패: ${failed.map((f) => f.label).join(', ')}`);
