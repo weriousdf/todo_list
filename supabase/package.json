@@ -1,0 +1,17 @@
+{
+  "name": "todo-list-supabase",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Supabase(클라우드 Postgres)에 저장하고 RLS 로 본인 데이터만 보이게 하는 Todo 앱",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "check": "node --env-file-if-exists=.env src/check.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

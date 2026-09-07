@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>할 일 (Supabase)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header class="top">
+      <h1>할 일</h1>
+      <div class="who" hidden>
+        <span id="who-email"></span>
+        <button type="button" id="logout" class="link">로그아웃</button>
+      </div>
+    </header>
+
+    <!-- .env 가 비어 있을 때 -->
+    <section id="setup" hidden>
+      <div class="card">
+        <h2>Supabase 설정이 필요합니다</h2>
+        <p id="setup-reason" class="muted"></p>
+        <ol>
+          <li><a href="https://supabase.com" target="_blank" rel="noreferrer">supabase.com</a> 에서 무료 프로젝트를 만듭니다.</li>
+          <li>대시보드의 <b>SQL Editor</b> 에서 <code>sql/</code> 폴더의 SQL 세 개를 순서대로 실행합니다.
+            <br><code>01_schema.sql</code> → <code>02_rls.sql</code> → <code>03_functions.sql</code></li>
+          <li><b>Authentication &gt; Sign In / Providers</b> 에서 Email 을 켜고,
+            혼자 쓸 거라면 <b>Confirm email</b> 을 끕니다(메일 인증 없이 바로 로그인).</li>
+          <li><b>Project Settings &gt; API</b> 에서 Project URL 과 <b>anon(public)</b> 키를 복사합니다.</li>
+          <li><code>cp .env.example .env</code> 후 두 값을 넣고 서버를 다시 켭니다.</li>
+        </ol>
+        <p class="warn">
+          service_role(secret) 키는 넣지 마세요. 그 키는 RLS 를 우회하므로 브라우저로
+          내려가는 순간 모든 사람의 데이터가 열립니다. 서버가 그 키를 감지하면 시작을 거부합니다.
+        </p>
+      </div>
+    </section>
+
+    <!-- 로그인 -->
+    <section id="auth" hidden>
+      <form id="auth-form" class="card" autocomplete="on">
+        <h2>로그인</h2>
+        <p class="muted">할 일은 계정마다 따로 저장됩니다. 다른 사람 것은 보이지 않습니다.</p>
+        <label>이메일
+          <input id="email" type="email" name="email" autocomplete="email" required>
+        </label>
+        <label>비밀번호
+          <input id="password" type="password" name="password" autocomplete="current-password"
+                 minlength="6" required>
+        </label>
+        <div class="row">
+          <button type="submit" id="login">로그인</button>
+          <button type="button" id="signup" class="secondary">회원가입</button>
+        </div>
+        <p id="auth-msg" class="msg" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <!-- 할 일 -->
+    <section id="app" hidden>
+      <form id="add-form" class="card" autocomplete="off">
+        <div class="row">
+          <input id="title" placeholder="할 일을 입력하세요" aria-label="할 일 제목" required>
+          <button type="submit">추가</button>
+        </div>
+        <div class="row sub">
+          <label>마감일 <input id="due" type="date" aria-label="마감일"></label>
+          <input id="tags" placeholder="태그 (쉼표로 구분: 공부, 급함)" aria-label="태그">
+        </div>
+        <p id="form-error" class="msg" role="alert" hidden></p>
+      </form>
+
+      <nav class="filters" aria-label="필터">
+        <button type="button" class="chip on" data-filter="all">전체</button>
+        <button type="button" class="chip" data-filter="today">오늘</button>
+        <button type="button" class="chip" data-filter="open">미완료</button>
+        <button type="button" class="chip" data-filter="done">완료</button>
+        <input id="search" type="search" placeholder="검색" aria-label="검색">
+      </nav>
+
+      <div id="tag-bar" class="filters tags" aria-label="태그 필터"></div>
+
+      <p id="status" class="status" role="status"></p>
+      <ul id="list" class="list"></ul>
+    </section>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
