@@ -7,8 +7,12 @@
   "engines": {
     "node": ">=24"
   },
+  "bin": {
+    "todo": "src/cli.js"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.js",
+    "todo": "node src/cli.js",
     "db:check": "node --env-file-if-exists=.env src/db-check.js",
     "api:check": "node --env-file-if-exists=.env src/api-check.js"
   },

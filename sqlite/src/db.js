@@ -12,6 +12,21 @@ const db = new DatabaseSync(dbPath);
 db.exec('PRAGMA foreign_keys = ON');
 db.exec(readFileSync(path.join(projectRoot, 'schema.sql'), 'utf8'));
 
+// schema.sql 은 전부 CREATE ... IF NOT EXISTS 라서, 이미 있는 표에 새 열이 생기면
+// 아무 일도 하지 않는다. 그래서 예전에 만든 todo.db 를 열었을 때 빠진 열을 여기서 붙인다.
+// 표·열 이름은 코드에 적힌 문자열이고 사용자 입력이 아니다. PRAGMA 와 ALTER TABLE 은
+// 이름 자리에 ? 를 쓸 수 없어서 문자열로 끼워 넣는다.
+function hasColumn(table, column) {
+  return db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column);
+}
+
+if (!hasColumn('todos', 'done_at')) {
+  db.exec('ALTER TABLE todos ADD COLUMN done_at TEXT');
+  // 예전 행에는 완료 시각이 없다. 비워 두면 이미 끝낸 일이 요약에서 통째로 사라지므로
+  // updated_at 으로 한 번만 어림잡아 채운다. 여기 값만 추정이고, 이후 완료분은 정확하다.
+  db.exec('UPDATE todos SET done_at = updated_at WHERE is_done = 1');
+}
+
 // group_concat 구분자로 쉼표 대신 US(0x1f) 문자를 쓴다. 태그 이름에 쉼표가 들어가도 안 깨진다.
 // 눈에 안 보이는 문자를 소스에 직접 넣으면 편집기가 지울 수 있으므로 코드로 만든다.
 // SQL 쪽 char(31) 과 반드시 같은 값이어야 한다.
@@ -37,6 +52,7 @@ function shape(row) {
     done: Number(row.is_done) === 1,
     due_date: row.due_date ?? null,
     created_at: row.created_at,
+    done_at: row.done_at ?? null,
     tags: row.tag_names ? String(row.tag_names).split(SEP) : [],
   };
 }
@@ -73,7 +89,7 @@ function setTags(todoId, names) {
 }
 
 const SELECT_TODOS = `
-  SELECT t.id, t.title, t.notes, t.is_done, t.due_date, t.created_at,
+  SELECT t.id, t.title, t.notes, t.is_done, t.due_date, t.created_at, t.done_at,
          group_concat(g.name, char(31)) AS tag_names
   FROM todos t
   LEFT JOIN todo_tags tt ON tt.todo_id = t.id
@@ -119,6 +135,17 @@ export function listTodos({ filter = 'all', q = '', tag = '', today = '' } = {})
   return db.prepare(sql).all(...params).map(shape);
 }
 
+// `todo summary` 가 쓰는 하루치 조회. done_at 은 UTC 라서 'localtime' 없이 비교하면
+// 한국 시간 오전 9시 전에 끝낸 일이 어제 것으로 잡힌다.
+// 여기서만 ORDER_TODOS 를 쓰지 않는다. 요약은 마감일 순서가 아니라 끝낸 순서로 읽는다.
+export function listDoneOn(date) {
+  const sql =
+    SELECT_TODOS +
+    " WHERE t.is_done = 1 AND date(t.done_at, 'localtime') = ?" +
+    ' GROUP BY t.id ORDER BY t.done_at';
+  return db.prepare(sql).all(date).map(shape);
+}
+
 export function getTodo(id) {
   const sql = SELECT_TODOS + ' WHERE t.id = ?' + ORDER_TODOS;
   const row = db.prepare(sql).get(id);
@@ -144,7 +171,18 @@ export function updateTodo(id, patch) {
     if ('title' in patch) { sets.push('title = ?'); params.push(patch.title); }
     if ('notes' in patch) { sets.push('notes = ?'); params.push(patch.notes); }
     if ('due_date' in patch) { sets.push('due_date = ?'); params.push(patch.due_date); }
-    if ('done' in patch) { sets.push('is_done = ?'); params.push(patch.done ? 1 : 0); }
+    if ('done' in patch) {
+      sets.push('is_done = ?');
+      params.push(patch.done ? 1 : 0);
+      // 완료 시각은 is_done 과 함께 움직인다. 이미 완료인 항목에 다시 done:true 가 와도
+      // 처음 끝낸 시각을 지키려고 CASE 로 거른다. UPDATE 의 SET 오른쪽 식은 바뀌기 전
+      // 행의 값을 보므로, 여기 is_done 은 이번에 넣을 값이 아니라 예전 값이다.
+      sets.push(
+        patch.done
+          ? "done_at = CASE WHEN is_done = 1 THEN done_at ELSE strftime('%Y-%m-%dT%H:%M:%SZ', 'now') END"
+          : 'done_at = NULL',
+      );
+    }
 
     if (sets.length) {
       const info = db.prepare(`UPDATE todos SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);

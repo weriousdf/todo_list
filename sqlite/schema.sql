@@ -15,7 +15,12 @@ CREATE TABLE IF NOT EXISTS todos (
   due_date   TEXT    CHECK (due_date IS NULL OR
                             due_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
   created_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-  updated_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+  updated_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+  -- 완료로 표시한 시각. 미완료면 NULL 이다. is_done 과 짝이라 db.js 의 updateTodo 에서
+  -- 둘을 같이 바꾼다. 자리가 is_done 옆이 아니라 맨 뒤인 이유: 예전 todo.db 에는
+  -- ALTER TABLE ADD COLUMN 으로 붙는데, 그건 항상 맨 뒤에 붙는다. 새로 만든 DB 와
+  -- 고쳐 쓴 DB 의 열 순서를 같게 두려고 여기에 적는다.
+  done_at    TEXT
 );
 
 -- 태그 이름의 원본. 이름을 바꿀 때 한 행만 고치면 된다.
