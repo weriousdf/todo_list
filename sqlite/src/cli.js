@@ -3,6 +3,7 @@
 // SQL 은 여기 없다 — server.js 와 같은 규칙이다.
 // 웹 앱과 같은 todo.db 를 보므로, 여기서 완료로 표시하면 브라우저에도 그대로 보인다.
 import path from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 
 // db.js 는 불러오는 순간 DB_PATH 를 읽고 파일을 연다. 그래서 .env 를 먼저 읽어야 한다.
@@ -15,7 +16,7 @@ try {
   // .env 가 없으면 db.js 의 기본값(todo.db)으로 간다.
 }
 
-const { dbPath, listTodos, listDoneOn, createTodo, updateTodo, normalizeTags } =
+const { dbPath, listTodos, listDoneOn, getTodo, createTodo, updateTodo, deleteTodo, normalizeTags } =
   await import('./db.js');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -156,6 +157,53 @@ function done(rest, options) {
   }
 }
 
+// 삭제는 되돌릴 수 없다. 화면에서 확인을 한 번 묻는 것과 같은 자리를 여기에도 둔다.
+// 터미널이 아닌 곳(파이프, 에이전트)에서는 물을 수단이 없다. 그럴 때 그냥 지우면
+// 확인 절차가 있으나 마나이므로, 무엇이 지워질지만 보여주고 멈춘다. --yes 가 그 문을 연다.
+async function rm(rest, options) {
+  if (rest.length === 0) return fail('지울 번호를 넣으세요.  예: todo rm 7');
+
+  const today = todayLocal();
+
+  // 지우기 전에 전부 찾아 둔다. 번호 하나가 틀렸을 때 앞의 것만 지워진 채로
+  // 멈추지 않도록, 보여주는 목록과 실제로 지우는 대상을 같게 맞춘다.
+  const targets = [];
+  for (const raw of rest) {
+    const id = Number(raw);
+    if (!Number.isInteger(id) || id <= 0) {
+      fail(`'${raw}' 는 할 일 번호가 아닙니다.`);
+      continue;
+    }
+    const todo = getTodo(id);
+    if (!todo) {
+      fail(`#${id} 인 할 일이 없습니다.`);
+      continue;
+    }
+    targets.push(todo);
+  }
+  if (targets.length === 0) return;
+
+  console.log(`지울 할 일 ${targets.length}건`);
+  printTodos(targets, today);
+
+  if (!options.yes) {
+    if (!process.stdin.isTTY) {
+      return fail('\n되돌릴 수 없는 작업입니다. 확인했다면 --yes 를 붙여 다시 실행하세요.');
+    }
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await rl.question('\n정말 지울까요? 되돌릴 수 없습니다. (y/N) ');
+    rl.close();
+    if (!/^y(es)?$/i.test(answer.trim())) {
+      return console.log('취소했습니다.');
+    }
+  }
+
+  for (const todo of targets) {
+    if (deleteTodo(todo.id)) console.log(`지움  ${line(todo, today)}`);
+    else fail(`#${todo.id} 를 지우지 못했습니다.`);
+  }
+}
+
 function summary(_rest, options) {
   const date = options.date ?? todayLocal();
   if (!DATE_RE.test(date)) return fail('날짜는 YYYY-MM-DD 형식이어야 합니다.');
@@ -184,10 +232,12 @@ function help() {
       '  todo add <제목> [--due YYYY-MM-DD] [--tag 공부,운동] [--notes 메모]',
       '  todo list [검색어] [--all | --done | --today] [--tag 공부]',
       '  todo done <번호> [번호 ...] [--undo]',
+      '  todo rm <번호> [번호 ...] [--yes]',
       '  todo summary [--date YYYY-MM-DD]',
       '',
       'list 는 아무 것도 안 붙이면 미완료만 보여준다.',
       'summary 는 그날 완료로 표시한 일을 모아 보여준다.',
+      'rm 은 되돌릴 수 없다. 확인을 묻고, 물을 수 없는 자리에서는 --yes 를 요구한다.',
       '',
       `데이터 파일: ${dbPath}`,
     ].join('\n'),
@@ -204,10 +254,11 @@ const OPTIONS = {
   done: { type: 'boolean' },
   today: { type: 'boolean' },
   undo: { type: 'boolean' },
+  yes: { type: 'boolean' },
   help: { type: 'boolean', short: 'h' },
 };
 
-const COMMANDS = { add, list, done, summary };
+const COMMANDS = { add, list, done, rm, summary };
 
 let parsed;
 try {
@@ -230,7 +281,7 @@ const [command, ...rest] = parsed.positionals;
 
 // Object.hasOwn 없이 COMMANDS[command] 만 보면 'constructor' 같은 이름이 함수로 잡힌다.
 if (command && Object.hasOwn(COMMANDS, command) && !parsed.values.help) {
-  COMMANDS[command](rest, parsed.values, parsed.tokens);
+  await COMMANDS[command](rest, parsed.values, parsed.tokens);
 } else {
   if (command && !Object.hasOwn(COMMANDS, command)) fail(`'${command}' 는 없는 명령입니다.`);
   help();

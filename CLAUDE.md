@@ -10,6 +10,7 @@
 - 목록: `npm run todo -- list` — 검색어, `--all` `--done` `--today` `--tag` 사용 가능
 - 추가: `npm run todo -- add "<내용>"` — `--due YYYY-MM-DD` `--tag` `--notes`
 - 완료: `npm run todo -- done <번호>` — 여러 개 가능, `--undo` 로 되돌림
+- 삭제: `npm run todo -- rm <번호>` — 되돌릴 수 없음. `--yes` 없이는 미리보기만 나온다
 - 오늘 완료 요약: `npm run todo -- summary` — `--date YYYY-MM-DD`
 
 `npm run todo --` 대신 `node src/cli.js <명령>` 으로 써도 같다.
@@ -18,7 +19,11 @@
 ## 규칙
 - 데이터는 `sqlite/todo.db` 에 저장한다. UI 문구는 존댓말로.
 - 할 일을 읽고 쓸 때는 위 CLI 를 쓴다. `todo.db` 에 SQL 을 직접 걸지 않는다.
+- 중복이나 잘못 넣은 항목은 `done` 이 아니라 `rm` 으로 지운다.
+  `done` 은 '실제로 끝냈다'는 뜻이라 `summary` 의 완료 집계를 어지럽힌다.
 
 ## 하지 말 것
 - `todo.db`(실데이터)를 직접 지우거나 덮어쓰지 말 것.
-- 데이터를 바꾸는 명령(`add`·`done`)은 실행 전에 무엇을 바꿀지 먼저 알릴 것.
+- 데이터를 바꾸는 명령(`add`·`done`·`rm`)은 실행 전에 무엇을 바꿀지 먼저 알릴 것.
+- `rm --yes` 는 사용자가 지울 대상을 확인하고 지시했을 때만 쓸 것.
+- CLI 를 시험할 때는 `DB_PATH=scratch.db` 처럼 별도 파일에 대고 한다.
