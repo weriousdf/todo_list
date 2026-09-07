@@ -5,7 +5,7 @@
 ## 실행
 
 ```
-cd todo_list
+cd sqlite
 npm install
 npm start
 ```
@@ -88,7 +88,7 @@ todo summary             # 오늘 끝낸 일. --date 2026-09-07 로 다른 날
 ## 구성
 
 ```
-todo_list/
+sqlite/
 ├── package.json
 ├── .env.example       # .env 로 복사해서 쓴다
 ├── .env               # 커밋하지 않는다
@@ -153,7 +153,7 @@ npm run db:check
 npm run api:check
 ```
 
-검사 20개가 전부 PASS 여야 한다. 만든 항목은 끝에서 스스로 지우므로 기존 데이터는 그대로다.
+검사 21개가 전부 PASS 여야 한다. 만든 항목은 끝에서 스스로 지우므로 기존 데이터는 그대로다.
 
 `curl` 로 직접 확인하지 않는 이유: Windows 의 Git Bash 에서 `curl -d` 에 한글을 넘기면
 인수가 CP949 로 변환되어 서버에는 깨진 바이트가 도착한다(저장된 값이 `U+FFFD` 가 된다).
