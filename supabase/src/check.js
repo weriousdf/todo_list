@@ -79,7 +79,7 @@ for (const table of tables) {
   }
 }
 if (!schemaOk) {
-  note('supabase/01_schema.sql 을 대시보드 SQL Editor 에 붙여넣고 실행하세요.');
+  note('sql/01_schema.sql 을 대시보드 SQL Editor 에 붙여넣고 실행하세요.');
   process.exit(1);
 }
 
@@ -91,7 +91,7 @@ for (const table of tables) {
   anonRowTotal += rows;
   check(`${table}: 로그인 없이 아무 행도 안 보인다`, status === 200 && rows === 0, `${rows}행`);
   if (rows > 0) {
-    note(`경보: RLS 가 켜져 있지 않습니다. supabase/02_rls.sql 을 실행하세요.`);
+    note(`경보: RLS 가 켜져 있지 않습니다. sql/02_rls.sql 을 실행하세요.`);
   }
 }
 
